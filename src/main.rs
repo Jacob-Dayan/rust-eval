@@ -59,7 +59,10 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     buffer.write_all(input.as_bytes())?;
     buffer.write_all(FOOTER.as_bytes())?;
     buffer.flush()?;
-    // So if trying to access stdin, it doesn't look like the EOF is not recognized
+    // printing `\n` twice, so if trying to access stdin,
+    // or there are some errors,
+    // it doesn't look like the EOF is not recognized or the errors are
+    // being injected to the input AND the EOF is not being recognized
     print!("\n\n");
     compile_and_run!()?;
 
