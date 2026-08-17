@@ -21,10 +21,14 @@ fn main() -> ExitCode {
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     println!("To enter, stream EOF (ctrl+D on Unix, ctrl+Z on Windows)\n");
-    let input = read_all!(">>> ")?;
+    let mut input = read_all!(">>> ")?;
 
     if !MAIN_RE.is_match(&input) {
-        return Err("No valid main function found".into());
+        if input.contains("fn ") {
+            return Err("No valid main function found".into());
+        } else {
+            input = format!("fn main() {{ {input} }}");
+        }
     }
 
     if Path::new(TEMP_DIR).exists() {

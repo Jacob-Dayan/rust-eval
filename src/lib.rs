@@ -16,9 +16,9 @@ macro_rules! read_all {
 macro_rules! print_results {
     ($output:expr) => {
         println!("===STDOUT===");
-        std::io::stdout().write_all(&$output.stdout)?;
+        io::stdout().write_all(&$output.stdout)?;
         println!("===STDERR===");
-        std::io::stderr().write_all(&$output.stderr)?;
+        io::stderr().write_all(&$output.stderr)?;
         println!("===EXIT CODE===");
         eprintln!("{}", $output.status);
     };
