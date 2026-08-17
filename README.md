@@ -68,6 +68,17 @@ The sum is: 15
 exit status: 0
 ```
 
+And if you just wanna run a simple code snippet, you don't even have to mess with `main` function.
+
+the code from below, works exactly the same as the one above:
+
+```text
+To enter, stream EOF (ctrl+D on Unix, ctrl+Z on Windows)
+
+>>> let numbers = vec![1, 2, 3, 4, 5];
+    let sum: i32 = numbers.iter().sum();
+    println!("The sum is: {}", sum);
+```
 ---
 
 ##  Project Structure
