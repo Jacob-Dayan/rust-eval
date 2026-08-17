@@ -1,11 +1,11 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
-pub const TEMP_DIR: &str = "tmp";
-pub const CODE_FILE: &str = "tmp/tmp.rs";
+pub const TEMP_DIR: &str = "./tmp";
+pub const CODE_FILE: &str = "./tmp/tmp.rs";
 
 #[cfg(target_family = "unix")]
-pub const EXEC_FILE: &str = "tmp/tmp";
+pub const EXEC_FILE: &str = "./tmp/tmp";
 
 #[cfg(target_family = "windows")]
 pub const EXEC_FILE: &str = "tmp\\tmp.exe";

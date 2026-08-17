@@ -13,18 +13,6 @@ macro_rules! read_all {
 }
 
 #[macro_export]
-macro_rules! print_results {
-    ($output:expr) => {
-        println!("===STDOUT===");
-        io::stdout().write_all(&$output.stdout)?;
-        println!("===STDERR===");
-        io::stderr().write_all(&$output.stderr)?;
-        println!("===EXIT CODE===");
-        eprintln!("{}", $output.status);
-    };
-}
-
-#[macro_export]
 macro_rules! compile_and_run {
     () => {{
         let compile_status = std::process::Command::new("rustc")
@@ -34,8 +22,25 @@ macro_rules! compile_and_run {
             .status()?;
 
         if compile_status.success() {
-            let output = std::process::Command::new($crate::consts::EXEC_FILE).output()?;
-            $crate::print_results!(output);
+            let status = std::process::Command::new($crate::consts::EXEC_FILE)
+                .stdin(std::process::Stdio::inherit())
+                .stdout(std::process::Stdio::inherit())
+                .stderr(std::process::Stdio::inherit())
+                .status()?;
+
+            if status.success() {
+                Ok::<(), $crate::io::Error>(())
+            } else {
+                Err($crate::io::Error::new(
+                    $crate::io::ErrorKind::Other,
+                    "Process failed",
+                ))
+            }
+        } else {
+            Err($crate::io::Error::new(
+                $crate::io::ErrorKind::Other,
+                "Compilation failed",
+            ))
         }
     }};
 }
