@@ -33,7 +33,7 @@
 
 1. Clone the repository:
    ```bash
-   git clone https://github.com/Jacob-Dayan/rust_eval.git
+   git clone https://github.com/Jacob-Dayan/rust-eval.git
    cd rust_eval
    ```
 
