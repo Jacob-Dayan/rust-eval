@@ -2,6 +2,17 @@ pub use std::io::{self, BufWriter, Read, Write};
 pub mod consts;
 
 #[macro_export]
+macro_rules! new_io_error {
+    ($e:expr) => {
+        Err(std::io::Error::new(std::io::ErrorKind::Other, $e))
+    };
+}
+
+/// Reads all input from `stdin` until `EOF`, displaying a prompt first.
+///
+/// # Errors
+/// Returns an [`std::io::Error`] if reading from `stdin` or flushing `stdout` fails.
+#[macro_export]
 macro_rules! read_all {
     ($prompt:expr) => {{
         print!("{}", $prompt);
@@ -12,6 +23,12 @@ macro_rules! read_all {
     }};
 }
 
+/// Calls `rustc` to compile the code, then runs the compiled binary with `stdin`, `stdout`, and `stderr` redirected.
+///
+/// # Errors
+/// Because `rustc` prints to stderr by itself, we do not have to catch any errors from it and print them.
+/// That lets us focus on whether the compilation or execution was successful.
+/// if successful returns [`Result::Ok`], otherwise returns a new [`std::io::Error`] with a descriptive message.
 #[macro_export]
 macro_rules! compile_and_run {
     () => {{
@@ -31,16 +48,10 @@ macro_rules! compile_and_run {
             if status.success() {
                 Ok::<(), $crate::io::Error>(())
             } else {
-                Err($crate::io::Error::new(
-                    $crate::io::ErrorKind::Other,
-                    "Process failed",
-                ))
+                new_io_error!("Program has exited with a non-zero status.")
             }
         } else {
-            Err($crate::io::Error::new(
-                $crate::io::ErrorKind::Other,
-                "Compilation failed",
-            ))
+            new_io_error!("Compilation failed.")
         }
     }};
 }

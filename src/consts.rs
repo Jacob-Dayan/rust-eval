@@ -1,6 +1,9 @@
 use regex::Regex;
 use std::sync::LazyLock;
 
+pub const PURPLE: &str = "\x1b[35m"; // Python uses purple, then why whouldn't we?
+pub const RESET: &str = "\x1b[0m";
+
 pub const TEMP_DIR: &str = "./tmp";
 pub const CODE_FILE: &str = "./tmp/tmp.rs";
 
@@ -10,6 +13,7 @@ pub const EXEC_FILE: &str = "./tmp/tmp";
 #[cfg(target_family = "windows")]
 pub const EXEC_FILE: &str = "tmp\\tmp.exe";
 
+/// Regex for the `main` function signature.
 pub static MAIN_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"fn\s+main\s*\([^)]*\)(?:\s*->\s*[^{]+)?\s*\{").unwrap());
 

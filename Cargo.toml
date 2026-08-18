@@ -1,6 +1,6 @@
 [package]
 name = "rust-eval"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
@@ -12,3 +12,11 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[lib]
+name = "rust_eval_core"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rust-eval"
+path = "src/main.rs"
