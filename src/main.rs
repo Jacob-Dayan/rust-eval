@@ -38,22 +38,32 @@ pub fn main() -> ExitCode {
 
 /// The function that manages the REPL-like loop and evaluates user input.
 ///
-/// Gets user's code using [read_all macro] macro defined in [`rust_eval_core`][rust_eval_core],
+/// Gets user's code using [`read_all macro`] macro defined in [`rust_eval_core`],
 /// checks if the code contains a main function and wraps it in one if necessary.
 /// If the code does not contain a main function, but does contain function definitions,
 /// then an error is returned.
 ///
 /// After the code validates, checks if `tmp` folder exists and creates it if it doesn't.
-/// then writes the input code to the [code file] in `tmp` folder after writing a header comment, and calls
-/// [compile_and_run macro] to compile and run the code using `rustc`.
+/// then writes the input code to the [`code file`] in `tmp` folder after writing a header comment, and calls
+/// [`compile_and_run macro`] to compile and run the code using `rustc`.
 /// After running, the `tmp` folder is deleted.
 ///
-/// The writing to the [code file] is done using a [`io::BufWriter`] for better performance and less IO and system calls.
+/// # Errors
 ///
-/// [read_all macro]: [`rust_eval_core::read_all!`]
-/// [compile_and_run macro]: [`rust_eval_core::compile_and_run`]
-/// [code file]: [`rust_eval_core::consts::CODE_FILE`]
-pub fn run() -> Result<bool, Box<dyn std::error::Error>> {
+/// The function's return type is [`io::Result`], so any errors are returned as [`io::Error`].
+/// You might wonder why we don't use [`Result<bool, Box<dyn Error>>`] instead in a function when we might
+/// return a custom error (which Box<dyn Error> makes it easy to do with `into()` function); well that's a term of performance:
+/// Box<dyn Error> is a trait object, so its size is not known at compile time,
+/// then it has to be allocated on the heap.
+/// while [`io::Error`] is a struct with a fixed size allowing it to be stored on the stack.
+/// We grant performance over convenience, but it is not very noticeable when using the [`new_io_error`] macro.
+///
+/// The writing to the [`code file`] is done using a [`io::BufWriter`] for better performance and less IO and system calls.
+///
+/// [`read_all macro`]: macro@rust_eval_core::read_all
+/// [`compile_and_run macro`]: macro@rust_eval_core::compile_and_run
+/// [`code file`]: rust_eval_core::consts::CODE_FILE
+pub fn run() -> io::Result<bool> {
     let mut should_exit = false;
     println!("To enter, stream EOF (ctrl+D on Unix, ctrl+Z on Windows)\nTo exit, type `exit`.\n");
     let mut input = read_all!(format_args!("{PURPLE}>>> {RESET}"))?; // More performant than format!
@@ -66,7 +76,7 @@ pub fn run() -> Result<bool, Box<dyn std::error::Error>> {
         // then we can't wrap the code in a main function
         // then we have to return an error.
         if input.contains("fn ") {
-            return Err("No valid main function found.".into());
+            return new_io_error!("No valid main function found.");
         }
         // Here, we can wrap the code in a main function, because there are no function definitions
         // this lets us run code like this:
