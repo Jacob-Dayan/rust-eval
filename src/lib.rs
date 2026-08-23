@@ -31,11 +31,15 @@ macro_rules! read_all {
 /// if successful returns [`Result::Ok`], otherwise returns a new [`std::io::Error`] with a descriptive message.
 #[macro_export]
 macro_rules! compile_and_run {
-    () => {{
+    () => {
+        $crate::compile_and_run!(std::process::Stdio::inherit())
+    };
+    ($rustc_stderr:expr) => {{
         let compile_status = std::process::Command::new("rustc")
             .arg($crate::consts::CODE_FILE)
             .arg("--out-dir")
             .arg($crate::consts::TEMP_DIR)
+            .stderr($rustc_stderr)
             .status()?;
 
         if compile_status.success() {

@@ -67,9 +67,20 @@ pub fn run() -> io::Result<bool> {
     let mut should_exit = false;
     println!("To enter, stream EOF (ctrl+D on Unix, ctrl+Z on Windows)\nTo exit, type `exit`.\n");
     let mut input = read_all!(format_args!("{PURPLE}>>> {RESET}"))?; // More performant than format!
-    if input.trim() == "exit" {
+    if input.trim().to_ascii_lowercase().as_str() == "exit" {
         should_exit = true;
         return Ok(should_exit);
+    } else if input.trim().to_ascii_lowercase().as_str() == "clear" {
+        std::process::Command::new("clear")
+            .spawn()
+            .expect("Failed to clear terminal.")
+            .wait()
+            .unwrap();
+
+        println!(
+            "To enter, stream EOF (ctrl+D on Unix, ctrl+Z on Windows)\nTo exit, type `exit`.\n"
+        );
+        input = read_all!(format_args!("{PURPLE}>>> {RESET}"))?;
     }
     if !MAIN_RE.is_match(&input) {
         // If no main function is found, but there are function definitions,

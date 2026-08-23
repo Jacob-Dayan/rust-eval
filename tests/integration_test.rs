@@ -15,6 +15,7 @@ extern crate rust_eval_core;
 use rust_eval_core::consts;
 use std::fs;
 use std::io::{self, Cursor, Read};
+use std::process::Stdio;
 use std::sync::Mutex;
 
 /// Global mutex to enforce sequential execution for tests that manipulate
@@ -107,7 +108,7 @@ fn test_compile_and_run_compilation_failure() -> io::Result<()> {
     );
     fs::write(consts::CODE_FILE, invalid_code)?;
 
-    let result = compile_and_run!();
+    let result = compile_and_run!(Stdio::null());
     assert!(
         result.is_err(),
         "Expected compilation to fail for invalid syntax"
