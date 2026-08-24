@@ -10,9 +10,9 @@
 //! test execution (`cargo test`), file system operations are serialized using [`ENV_MUTEX`].
 
 #[macro_use]
-extern crate rust_eval_core;
+extern crate rust_eval;
 
-use rust_eval_core::consts;
+use rust_eval::consts;
 use std::fs;
 use std::io::{self, Cursor, Read};
 use std::process::Stdio;

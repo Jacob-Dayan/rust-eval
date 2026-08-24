@@ -1,4 +1,4 @@
-use rust_eval_core::{consts::*, *};
+use rust_eval::{consts::*, *};
 use std::{
     fs::{self, File},
     io::{BufWriter, Read, Write},
