@@ -23,11 +23,8 @@ pub fn main() -> ExitCode {
             Err(e) => {
                 eprintln!("{e}");
                 if Path::new(TEMP_DIR).exists() {
-                    // The `let _ =` is to suppress the error if the directory doesn't exist,
-                    // which only would happen in a very weird situation
-                    // where both the directory was deleted, but there was an error
-                    // that should have been cutting the program off before it was able to clean up
-                    // that didn't.
+                    // The `let _ =` is to suppress the error if the directory cannot be removed,
+                    // which would be weird.
                     let _ = fs::remove_dir_all(TEMP_DIR);
                 }
                 return ExitCode::FAILURE;
