@@ -1,77 +1,53 @@
-//! Integration tests for the `rust-eval` suite.
+//! Integration tests for the `rs-eval` suite.
 //!
-//! This module validates core features of the `rust-eval` workspace, including:
-//! - Simulated standard input handling via [`read_all!`].
+//! Validates:
+//! - Simulated standard input handling via [`simulate_stdin!`].
 //! - Code generation, compilation, and execution via [`compile_and_run!`].
 //!
 //! # Thread Safety Notice
 //! Tests interacting with the file system share the constant directory path `./tmp`
-//! defined in [`rust_eval_core::consts`]. To prevent race conditions during parallel
+//! defined in [`rs_eval::consts`]. To prevent race conditions during parallel
 //! test execution (`cargo test`), file system operations are serialized using [`ENV_MUTEX`].
 
 #[macro_use]
-extern crate rust_eval;
+extern crate rust_eval as rs_eval;
 
-use rust_eval::consts;
+use rs_eval::consts;
 use std::fs;
 use std::io::{self, Cursor, Read};
 use std::process::Stdio;
 use std::sync::Mutex;
 
-/// Global mutex to enforce sequential execution for tests that manipulate
-/// the shared `./tmp` directory structure and `rustc` compilation outputs.
+/// Global mutex to enforce sequential execution for tests manipulating `./tmp`.
 static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
-/// Helper function to simulate `stdin` stream reading for macro validation.
-///
-/// Wraps an in-memory string slice into a [`Cursor`], reads it to completion,
-/// and returns the trimmed result string.
-///
-/// # Arguments
-/// * `input` - The string slice simulating incoming `stdin` content.
-fn simulate_stdin(input: &str) -> String {
-    let mut stdin_mock = Cursor::new(input.as_bytes());
-    let mut buffer = String::new();
-    stdin_mock.read_to_string(&mut buffer).unwrap();
-    buffer.trim().to_string()
+/// Reads an in-memory string slice through a [`Cursor`] to simulate trimmed `stdin` input.
+macro_rules! simulate_stdin {
+    ($input:expr) => {{
+        let mut stdin_mock = Cursor::new($input.as_bytes());
+        let mut buffer = String::new();
+        stdin_mock.read_to_string(&mut buffer).unwrap();
+        buffer.trim().to_string()
+    }};
 }
 
-/// Helper function to guarantee a clean workspace in `./tmp` before and after test execution.
-///
-/// Ensures the test environment is reset regardless of previous panics or aborted runs.
-fn clean_temp_dir() {
-    if std::path::Path::new(consts::TEMP_DIR).exists() {
-        let _ = fs::remove_dir_all(consts::TEMP_DIR);
-    }
-}
-
-/// Tests that simulating input streams correctly trims whitespace and preserves input text.
+/// Tests that `simulate_stdin!` properly handles various whitespace and newline patterns.
 #[test]
 fn test_simulate_stdin_variations() {
-    // Basic standard input
-    assert_eq!(simulate_stdin("hello world"), "hello world");
-
-    // Empty input stream
-    assert_eq!(simulate_stdin(""), "");
-
-    // Input surrounded by leading and trailing whitespace
-    assert_eq!(simulate_stdin("   trimmed content   "), "trimmed content");
-
-    // Input containing multi-line strings
+    assert_eq!(simulate_stdin!("hello world"), "hello world");
+    assert_eq!(simulate_stdin!(""), "");
+    assert_eq!(simulate_stdin!("   trimmed content   "), "trimmed content");
     assert_eq!(
-        simulate_stdin("first line\nsecond line\n"),
+        simulate_stdin!("first line\nsecond line\n"),
         "first line\nsecond line"
     );
 }
 
-/// Tests successful compilation and execution of valid Rust source code via [`compile_and_run!`].
-///
-/// # Errors
-/// Returns an [`io::Result`] error if file system setup fails unexpectedly.
+/// Tests successful compilation and execution of valid Rust code.
 #[test]
 fn test_compile_and_run_success() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
-    clean_temp_dir();
+    clean_temp_dir!();
 
     fs::create_dir_all(consts::TEMP_DIR)?;
     let code = format!(
@@ -87,18 +63,15 @@ fn test_compile_and_run_success() -> io::Result<()> {
         "Expected code compilation and execution to succeed"
     );
 
-    clean_temp_dir();
+    clean_temp_dir!();
     Ok(())
 }
 
-/// Tests that syntax errors in submitted Rust code are caught during `rustc` compilation.
-///
-/// # Errors
-/// Returns an [`io::Result`] error if file system setup fails unexpectedly.
+/// Tests that syntax errors in submitted Rust code are caught during compilation.
 #[test]
 fn test_compile_and_run_compilation_failure() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
-    clean_temp_dir();
+    clean_temp_dir!();
 
     fs::create_dir_all(consts::TEMP_DIR)?;
     let invalid_code = format!(
@@ -115,18 +88,15 @@ fn test_compile_and_run_compilation_failure() -> io::Result<()> {
     );
     assert_eq!(result.unwrap_err().to_string(), "Compilation failed.");
 
-    clean_temp_dir();
+    clean_temp_dir!();
     Ok(())
 }
 
-/// Tests that programs compiling successfully but panicking at runtime return a non-zero exit status error.
-///
-/// # Errors
-/// Returns an [`io::Result`] error if file system setup fails unexpectedly.
+/// Tests that runtime panics produce a non-zero exit status error.
 #[test]
 fn test_compile_and_run_runtime_panic() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
-    clean_temp_dir();
+    clean_temp_dir!();
 
     fs::create_dir_all(consts::TEMP_DIR)?;
     let panic_code = format!(
@@ -146,18 +116,15 @@ fn test_compile_and_run_runtime_panic() -> io::Result<()> {
         "Program has exited with a non-zero status."
     );
 
-    clean_temp_dir();
+    clean_temp_dir!();
     Ok(())
 }
 
-/// Tests basic variable allocations and standard arithmetic operations within compiled Rust code.
-///
-/// # Errors
-/// Returns an [`io::Result`] error if file system setup fails unexpectedly.
+/// Tests basic variable allocations and standard arithmetic operations within evaluated code.
 #[test]
 fn test_compile_and_run_arithmetic_evaluation() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
-    clean_temp_dir();
+    clean_temp_dir!();
 
     fs::create_dir_all(consts::TEMP_DIR)?;
     let arithmetic_code = format!(
@@ -173,14 +140,14 @@ fn test_compile_and_run_arithmetic_evaluation() -> io::Result<()> {
         "Expected arithmetic expressions to evaluate successfully"
     );
 
-    clean_temp_dir();
+    clean_temp_dir!();
     Ok(())
 }
 
-/// Tests that [`DefaultEditor`] and [`create_editor`] can be created and manage history correctly.
+/// Tests that [`DefaultEditor`] and [`create_editor`] initialize properly and accept history entries.
 #[test]
 fn test_default_editor_and_history() {
-    use rust_eval::{create_editor, DefaultEditor};
+    use rs_eval::{DefaultEditor, create_editor};
     let mut rl = DefaultEditor::new().expect("Failed to create DefaultEditor");
     let test_line = "let x = 42;";
     let added = rl.add_history_entry(test_line);
@@ -188,5 +155,8 @@ fn test_default_editor_and_history() {
 
     let mut eval_rl = create_editor().expect("Failed to create EvalEditor");
     let added_eval = eval_rl.add_history_entry(test_line);
-    assert!(added_eval.is_ok(), "Failed to add history entry to EvalEditor");
+    assert!(
+        added_eval.is_ok(),
+        "Failed to add history entry to EvalEditor"
+    );
 }

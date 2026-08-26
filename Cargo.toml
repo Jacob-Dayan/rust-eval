@@ -1,11 +1,15 @@
 [package]
 name = "rust-eval"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 
 [dependencies]
 regex = "1.13.1"
 rustyline = "18.0.1"
+
+[[bin]]
+name = "rs-eval"
+path = "src/main.rs"
 
 [profile.release]
 opt-level = 3

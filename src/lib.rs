@@ -1,18 +1,47 @@
+//! Library crate for `rs-eval` (shortcut alias for `rust-eval`).
+
 pub use rustyline::{
-    self, completion::Completer, error::ReadlineError, highlight::Highlighter, hint::Hinter,
-    history::DefaultHistory, validate::Validator, Cmd, ConditionalEventHandler, Config,
-    DefaultEditor, Editor, Event, EventContext, EventHandler, Helper, KeyCode, KeyEvent, Modifiers,
-    RepeatCount,
+    Cmd, ConditionalEventHandler, Config, DefaultEditor, Editor, Event, EventContext,
+    EventHandler, Helper, KeyCode, KeyEvent, Modifiers, RepeatCount, completion::Completer,
+    error::ReadlineError, highlight::Highlighter, hint::Hinter, history::DefaultHistory,
+    validate::Validator,
 };
-pub use std::io::{self, BufWriter, Read, Write};
+pub use std::io::{self, Read, Write};
 use std::sync::{Arc, Mutex};
+
 pub mod consts;
 
+pub use crate as rs_eval;
+
+/// Constructs an [`io::Error`](std::io::Error) with [`io::ErrorKind::Other`](std::io::ErrorKind::Other) wrapped in `Err`.
 #[macro_export]
 macro_rules! new_io_error {
     ($e:expr) => {
         Err(std::io::Error::new(std::io::ErrorKind::Other, $e))
     };
+}
+
+/// Removes the temporary directory ([`consts::TEMP_DIR`]) if it exists.
+#[macro_export]
+macro_rules! clean_temp_dir {
+    () => {
+        if std::path::Path::new($crate::consts::TEMP_DIR).exists() {
+            let _ = std::fs::remove_dir_all($crate::consts::TEMP_DIR);
+        }
+    };
+}
+
+/// Clears the terminal screen across platforms (`clear` on Unix, `cls` on Windows).
+#[macro_export]
+macro_rules! clear_screen {
+    () => {{
+        #[cfg(target_family = "unix")]
+        let _ = std::process::Command::new("clear").status();
+        #[cfg(target_family = "windows")]
+        let _ = std::process::Command::new("cmd")
+            .args(["/C", "cls"])
+            .status();
+    }};
 }
 
 /// Navigation action triggered by navigation keys.
@@ -25,24 +54,30 @@ pub enum NavAction {
     Submit,
 }
 
-/// Custom helper for `rust-eval`.
+/// Helper for `rs-eval` providing line-navigation state tracking.
 #[derive(Default, Clone)]
 pub struct RustEvalHelper {
     nav_action: Arc<Mutex<NavAction>>,
 }
 
+/// Type alias for [`RustEvalHelper`].
+pub type RsEvalHelper = RustEvalHelper;
+
 impl RustEvalHelper {
+    /// Creates a new helper with default navigation state.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
+    /// Sets the pending navigation action.
     pub fn set_nav_action(&self, action: NavAction) {
         if let Ok(mut lock) = self.nav_action.lock() {
             *lock = action;
         }
     }
 
+    /// Returns the current navigation action, falling back to [`NavAction::Enter`].
     #[must_use]
     pub fn get_nav_action(&self) -> NavAction {
         self.nav_action
@@ -62,18 +97,23 @@ impl Highlighter for RustEvalHelper {}
 impl Validator for RustEvalHelper {}
 impl Helper for RustEvalHelper {}
 
-struct KeyNav(Arc<Mutex<NavAction>>, NavAction, bool);
+/// Conditional event handler for cursor boundary line navigation and submission keys.
+struct KeyNav {
+    action: Arc<Mutex<NavAction>>,
+    target: NavAction,
+    at_boundary: bool,
+}
 
 impl ConditionalEventHandler for KeyNav {
     fn handle(&self, _evt: &Event, _n: RepeatCount, _pos: bool, ctx: &EventContext) -> Option<Cmd> {
-        let trigger = match self.1 {
-            NavAction::PrevLine if self.2 => ctx.pos() == 0,
-            NavAction::NextLine if self.2 => ctx.pos() == ctx.line().len(),
+        let trigger = match self.target {
+            NavAction::PrevLine if self.at_boundary => ctx.pos() == 0,
+            NavAction::NextLine if self.at_boundary => ctx.pos() == ctx.line().len(),
             _ => true,
         };
         if trigger {
-            if let Ok(mut lock) = self.0.lock() {
-                *lock = self.1;
+            if let Ok(mut lock) = self.action.lock() {
+                *lock = self.target;
             }
             Some(Cmd::AcceptLine)
         } else {
@@ -82,43 +122,50 @@ impl ConditionalEventHandler for KeyNav {
     }
 }
 
-/// Type alias for the configured `rust-eval` editor.
+/// Type alias for the configured `rs-eval` editor.
 pub type EvalEditor = Editor<RustEvalHelper, DefaultHistory>;
 
 /// Creates and configures a new [`EvalEditor`] with multi-line editing and keybindings.
 ///
 /// # Errors
-/// Returns [`rustyline::error::ReadlineError`] if editor initialization fails.
+/// Returns [`ReadlineError`] if editor initialization fails.
 pub fn create_editor() -> rustyline::Result<EvalEditor> {
     let mut rl = Editor::with_config(Config::builder().auto_add_history(false).build())?;
     let helper = RustEvalHelper::new();
     let act = helper.nav_action.clone();
     rl.set_helper(Some(helper));
 
-    let mut bind = |code, mods, nav, check| {
+    let bindings = [
+        (KeyCode::Left, Modifiers::NONE, NavAction::PrevLine, true),
+        (KeyCode::Backspace, Modifiers::NONE, NavAction::PrevLine, true),
+        (KeyCode::Right, Modifiers::NONE, NavAction::NextLine, true),
+        (KeyCode::Up, Modifiers::NONE, NavAction::PrevLine, false),
+        (KeyCode::Down, Modifiers::NONE, NavAction::NextLine, false),
+        (KeyCode::Char('d'), Modifiers::CTRL, NavAction::Submit, false),
+        (KeyCode::Char('z'), Modifiers::CTRL, NavAction::Submit, false),
+    ];
+
+    for (code, mods, target, at_boundary) in bindings {
         rl.bind_sequence(
             KeyEvent(code, mods),
-            EventHandler::Conditional(Box::new(KeyNav(act.clone(), nav, check))),
+            EventHandler::Conditional(Box::new(KeyNav {
+                action: act.clone(),
+                target,
+                at_boundary,
+            })),
         );
-    };
-
-    bind(KeyCode::Left, Modifiers::NONE, NavAction::PrevLine, true);
-    bind(KeyCode::Backspace, Modifiers::NONE, NavAction::PrevLine, true);
-    bind(KeyCode::Right, Modifiers::NONE, NavAction::NextLine, true);
-    bind(KeyCode::Up, Modifiers::NONE, NavAction::PrevLine, false);
-    bind(KeyCode::Down, Modifiers::NONE, NavAction::NextLine, false);
-    bind(KeyCode::Char('d'), Modifiers::CTRL, NavAction::Submit, false);
-    bind(KeyCode::Char('z'), Modifiers::CTRL, NavAction::Submit, false);
+    }
 
     Ok(rl)
 }
 
-/// Reads multi-line input from [`EvalEditor`].
+/// Reads a multi-line input block from the editor, handling navigation and commands.
 ///
-/// Displays purple `>>> ` on the first line and purple `... ` on all subsequent lines.
+/// Displays purple `>>> ` on the first line and purple `... ` on continuation lines.
+/// Returns `Ok(None)` on exit signal (`exit`, `quit`, or Ctrl+C).
 ///
 /// # Errors
-/// Returns an [`std::io::Error`] if reading from the editor fails with an unexpected error.
+/// Returns an [`io::Error`] if an unexpected readline failure occurs.
 pub fn read_input(rl: &mut EvalEditor) -> io::Result<Option<String>> {
     let mut lines: Vec<String> = vec![String::new()];
     let mut curr_idx = 0;
@@ -126,9 +173,9 @@ pub fn read_input(rl: &mut EvalEditor) -> io::Result<Option<String>> {
 
     loop {
         let prompt = if curr_idx == 0 {
-            format!("{PURPLE}>>> {RESET}", PURPLE = consts::PURPLE, RESET = consts::RESET)
+            consts::PROMPT_MAIN
         } else {
-            format!("{PURPLE}... {RESET}", PURPLE = consts::PURPLE, RESET = consts::RESET)
+            consts::PROMPT_CONT
         };
 
         if let Some(h) = rl.helper_mut() {
@@ -142,22 +189,22 @@ pub fn read_input(rl: &mut EvalEditor) -> io::Result<Option<String>> {
             ("", current_text.as_str())
         };
 
-        let result = rl.readline_with_initial(&prompt, initial);
-        let action = rl.helper().map(RustEvalHelper::get_nav_action).unwrap_or(NavAction::Enter);
+        let result = rl.readline_with_initial(prompt, initial);
+        let action = rl
+            .helper()
+            .map(RustEvalHelper::get_nav_action)
+            .unwrap_or(NavAction::Enter);
 
         match result {
             Ok(line) => {
                 if curr_idx == 0 && lines.len() == 1 {
                     let trimmed = line.trim();
-                    if trimmed.eq_ignore_ascii_case("exit") || trimmed.eq_ignore_ascii_case("quit") {
+                    if trimmed.eq_ignore_ascii_case("exit") || trimmed.eq_ignore_ascii_case("quit")
+                    {
                         return Ok(None);
                     }
                     if trimmed.eq_ignore_ascii_case("clear") {
-                        #[cfg(target_family = "unix")]
-                        let _ = std::process::Command::new("clear").status();
-                        #[cfg(target_family = "windows")]
-                        let _ = std::process::Command::new("cmd").args(["/C", "cls"]).status();
-
+                        clear_screen!();
                         lines = vec![String::new()];
                         cursor_at_end = true;
                         continue;
@@ -179,20 +226,19 @@ pub fn read_input(rl: &mut EvalEditor) -> io::Result<Option<String>> {
                         cursor_at_end = false;
                     }
                     NavAction::Enter => {
-                        if curr_idx + 1 < lines.len() {
-                            curr_idx += 1;
-                            cursor_at_end = false;
-                        } else {
+                        curr_idx += 1;
+                        if curr_idx == lines.len() {
                             lines.push(String::new());
-                            curr_idx += 1;
                             cursor_at_end = true;
+                        } else {
+                            cursor_at_end = false;
                         }
                     }
                     _ => {}
                 }
             }
             Err(ReadlineError::Eof) => {
-                return Ok(if lines.len() == 1 && lines[0].trim().is_empty() {
+                return Ok(if lines.iter().all(|l| l.trim().is_empty()) {
                     None
                 } else {
                     Some(lines.join("\n"))
@@ -214,8 +260,10 @@ macro_rules! read_all {
 
 /// Calls `rustc` to compile the code, then runs the compiled binary with `stdin`, `stdout`, and `stderr` redirected.
 ///
+/// Accepts an optional `stderr` stream configuration for `rustc` (defaults to [`std::process::Stdio::inherit()`]).
+///
 /// # Errors
-/// If successful returns [`Result::Ok`], otherwise returns a new [`std::io::Error`].
+/// Returns an [`io::Error`](std::io::Error) if compilation fails or the program exits with a non-zero status.
 #[macro_export]
 macro_rules! compile_and_run {
     () => {

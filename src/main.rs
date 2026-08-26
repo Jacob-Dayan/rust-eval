@@ -1,14 +1,11 @@
-use rust_eval::{consts::*, *};
-use std::{
-    fs::{self, File},
-    io::{BufWriter, Write},
-    path::Path,
-    process::ExitCode,
-};
+use rust_eval as rs_eval;
+use rs_eval::{consts::*, *};
+use std::{fs, process::ExitCode};
 
-/// Loop calling [run] until it returns an error or a signal to exit.
+/// Entry point for `rs-eval`.
 ///
-/// Returns [ExitCode::SUCCESS] if [run] returns `Ok(...)`, otherwise returns [ExitCode::FAILURE].
+/// Loops evaluating inputs until the user signals an exit (via `exit`, `quit`, or Ctrl+C)
+/// or an unrecoverable error occurs.
 pub fn main() -> ExitCode {
     let mut rl = match create_editor() {
         Ok(rl) => rl,
@@ -18,99 +15,53 @@ pub fn main() -> ExitCode {
         }
     };
 
-    println!("To enter, stream EOF (ctrl+D on Unix, ctrl+Z on Windows)\nTo exit, press Ctrl+C or type `exit`.\n");
+    println!(
+        "To enter, stream EOF (ctrl+D on Unix, ctrl+Z on Windows)\nTo exit, press Ctrl+C or type `exit`.\n"
+    );
 
     loop {
         match run(&mut rl) {
-            Ok(should_exit) => {
-                if should_exit {
-                    return ExitCode::SUCCESS;
-                } else {
-                    print!("\n\n");
-                    continue;
-                }
-            }
+            Ok(true) => return ExitCode::SUCCESS,
+            Ok(false) => print!("\n\n"),
             Err(e) => {
                 eprintln!("{e}");
-                if Path::new(TEMP_DIR).exists() {
-                    // The `let _ =` is to suppress the error if the directory cannot be removed,
-                    // which would be weird.
-                    let _ = fs::remove_dir_all(TEMP_DIR);
-                }
+                clean_temp_dir!();
                 return ExitCode::FAILURE;
             }
         }
     }
 }
 
-/// The function that manages the REPL-like loop and evaluates user input.
+/// Reads a single submission, validates/wraps code in `fn main()` if needed, compiles, and runs it.
 ///
-/// Reads user code using [`read_input`] from the [`EvalEditor`],
-/// checks if the code contains a main function and wraps it in one if necessary.
-/// If the code does not contain a main function, but does contain function definitions,
-/// then an error is returned.
-///
-/// After the code validates, checks if `tmp` folder exists and creates it if it doesn't,
-/// then writes the input code to the [`code file`] in `tmp` folder after writing a header comment, and calls
-/// [`compile_and_run macro`] to compile and run the code using `rustc`.
-/// After running, the `tmp` folder is deleted.
+/// Returns `Ok(true)` if the user requested exit, `Ok(false)` after completing a run.
 ///
 /// # Errors
-///
-/// The function's return type is [`io::Result`], so any errors are returned as [`io::Error`].
-///
-/// The writing to the [`code file`] is done using a [`io::BufWriter`] for better performance and less IO and system calls.
-///
-/// [`compile_and_run macro`]: macro@rust_eval::compile_and_run
-/// [`code file`]: rust_eval::consts::CODE_FILE
+/// Returns an [`io::Error`] if input reading, file creation, compilation, or execution fails.
 pub fn run(rl: &mut EvalEditor) -> io::Result<bool> {
-    let raw_input = read_input(rl)?;
-
-    let mut input = match raw_input {
-        Some(line) => line,
-        None => return Ok(true), // Ctrl+C or exit received, signal exit
+    let Some(mut input) = read_input(rl)? else {
+        return Ok(true);
     };
 
-    let trimmed = input.trim();
-    if trimmed.is_empty() {
+    if input.trim().is_empty() {
         return Ok(false);
     }
 
     if !MAIN_RE.is_match(&input) {
-        // If no main function is found, but there are function definitions,
-        // then we can't wrap the code in a main function
-        // then we have to return an error.
         if input.contains("fn ") {
             return new_io_error!("No valid main function found.");
         }
-        // Here, we can wrap the code in a main function, because there are no function definitions
-        // this lets us run code like this:
-        // let nums: Vec<i32> = vec![1, 2, 3, 4, 5];
-        // let sum: i32 = nums.iter().sum();
-        // println!("Sum: {sum}");
-        // without having to define a main function
-        else {
-            input = format!("fn main() {{ {input} }}");
-        }
+        input = format!("fn main() {{\n{input}\n}}");
     }
 
-    if Path::new(TEMP_DIR).exists() {
-        fs::remove_dir_all(TEMP_DIR)?;
-    }
+    clean_temp_dir!();
     fs::create_dir_all(TEMP_DIR)?;
 
-    let mut buffer = BufWriter::new(File::create(CODE_FILE)?);
-    buffer.write_all(HEADER.as_bytes())?;
-    buffer.write_all(input.as_bytes())?;
-    buffer.write_all(FOOTER.as_bytes())?;
-    buffer.flush()?;
+    fs::write(CODE_FILE, format!("{HEADER}{input}{FOOTER}"))?;
 
     print!("\n\n");
     let result = compile_and_run!();
-
-    if Path::new(TEMP_DIR).exists() {
-        let _ = fs::remove_dir_all(TEMP_DIR);
-    }
+    clean_temp_dir!();
 
     result.map(|_| false)
 }
