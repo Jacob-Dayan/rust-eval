@@ -70,7 +70,7 @@ fn test_simulate_stdin_variations() {
 /// Returns an [`io::Result`] error if file system setup fails unexpectedly.
 #[test]
 fn test_compile_and_run_success() -> io::Result<()> {
-    let _guard = ENV_MUTEX.lock().unwrap();
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
     clean_temp_dir();
 
     fs::create_dir_all(consts::TEMP_DIR)?;
@@ -97,7 +97,7 @@ fn test_compile_and_run_success() -> io::Result<()> {
 /// Returns an [`io::Result`] error if file system setup fails unexpectedly.
 #[test]
 fn test_compile_and_run_compilation_failure() -> io::Result<()> {
-    let _guard = ENV_MUTEX.lock().unwrap();
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
     clean_temp_dir();
 
     fs::create_dir_all(consts::TEMP_DIR)?;
@@ -125,7 +125,7 @@ fn test_compile_and_run_compilation_failure() -> io::Result<()> {
 /// Returns an [`io::Result`] error if file system setup fails unexpectedly.
 #[test]
 fn test_compile_and_run_runtime_panic() -> io::Result<()> {
-    let _guard = ENV_MUTEX.lock().unwrap();
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
     clean_temp_dir();
 
     fs::create_dir_all(consts::TEMP_DIR)?;
@@ -156,7 +156,7 @@ fn test_compile_and_run_runtime_panic() -> io::Result<()> {
 /// Returns an [`io::Result`] error if file system setup fails unexpectedly.
 #[test]
 fn test_compile_and_run_arithmetic_evaluation() -> io::Result<()> {
-    let _guard = ENV_MUTEX.lock().unwrap();
+    let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
     clean_temp_dir();
 
     fs::create_dir_all(consts::TEMP_DIR)?;
@@ -175,4 +175,18 @@ fn test_compile_and_run_arithmetic_evaluation() -> io::Result<()> {
 
     clean_temp_dir();
     Ok(())
+}
+
+/// Tests that [`DefaultEditor`] and [`create_editor`] can be created and manage history correctly.
+#[test]
+fn test_default_editor_and_history() {
+    use rust_eval::{create_editor, DefaultEditor};
+    let mut rl = DefaultEditor::new().expect("Failed to create DefaultEditor");
+    let test_line = "let x = 42;";
+    let added = rl.add_history_entry(test_line);
+    assert!(added.is_ok(), "Failed to add history entry");
+
+    let mut eval_rl = create_editor().expect("Failed to create EvalEditor");
+    let added_eval = eval_rl.add_history_entry(test_line);
+    assert!(added_eval.is_ok(), "Failed to add history entry to EvalEditor");
 }

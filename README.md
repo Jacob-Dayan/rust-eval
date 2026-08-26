@@ -6,7 +6,8 @@
 
 ## Features
 
-* **Interactive Input:** Stream Rust scripts directly from `stdin` until an `EOF` signal is received.
+* **Interactive Multi-Line Editing:** Write and edit multi-line Rust code with seamless cursor navigation. Pressing **Left (`←`)** at the start of a line moves up to the previous line, and pressing **Right (`→`)** at the end of a line moves down to the next line. You can also use **Up (`↑`)** and **Down (`↓`)** to move vertically between lines and edit any line in place.
+* **Input Streaming & EOF Evaluation:** Type code naturally line-by-line with `Enter`. Stream `EOF` (`Ctrl+D` on Unix, `Ctrl+Z` on Windows) to submit the code for evaluation.
 * **Regex Validation & Implicit `main` Wrapping:** Uses pre-compiled regex matching to verify the presence of a valid `fn main` entry point. If no `main` function or additional function definitions (`fn `) are present, it automatically wraps the snippet inside an implicit `main` function.
 * **Cross-Platform Support:** Automatically handles execution targets and temp paths for Unix (`Linux`/`macOS`) and `Windows` (`.exe`).
 * **Isolated Build Environment:** Automatically manages a temporary directory (`tmp/`) for source generation and compilation, ensuring thorough cleanup even on error.
@@ -15,7 +16,7 @@
 ---
 
 ### How It Works
-1. **Input Reading:** Displays a `>>> ` prompt and streams user code until `EOF` (`Ctrl+D` on Unix/macOS, `Ctrl+Z` on Windows) is signaled.
+1. **Input Reading:** Displays a `>>> ` prompt and accepts multi-line code until `EOF` (`Ctrl+D` on Unix/macOS, `Ctrl+Z` on Windows) is signaled. You can navigate left/right/up/down to edit any line above before submitting.
 2. **Validation & Wrapping:** Evaluates input against a `LazyLock<Regex>` pattern. If a valid `fn main(...)` signature exists, it uses the input as-is. If no `main` exists and no other functions are defined, it automatically wraps the input inside `fn main() { ... }`. If other functions exist without a `main`, it returns an error.
 3. **Source Preparation:** Creates the `tmp/` workspace and outputs `tmp/tmp.rs`, wrapped with auto-generated headers and footers.
 4. **Compilation & Execution:** Invokes `rustc tmp/tmp.rs --out-dir tmp`. On successful compilation, executes the generated binary (`tmp/tmp` or `tmp/tmp.exe`), passing `stdin`, `stdout`, and `stderr` directly through to the terminal process.
@@ -64,9 +65,7 @@ Press `Ctrl+D` (or `Ctrl+Z` on Windows) to trigger evaluation:
 The sum is: 15
 ```
 
-And if you just wanna run a simple code snippet, you don't even have to mess with a main function.
-
-The code below works exactly the same as the one above:
+And if you just wanna run a simple code snippet, you don't even have to mess with a main function:
 ```text
 To enter, stream EOF (ctrl+D on Unix, ctrl+Z on Windows)
 

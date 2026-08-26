@@ -5,6 +5,7 @@ edition = "2024"
 
 [dependencies]
 regex = "1.13.1"
+rustyline = "18.0.1"
 
 [profile.release]
 opt-level = 3
