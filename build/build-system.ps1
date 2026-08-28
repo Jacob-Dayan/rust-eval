@@ -7,7 +7,7 @@ if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdenti
 Set-Location "$PSScriptRoot\.."
 cargo build --release
 
-$targetDir = "$env:ProgramFiles\R-touch\bin"
+$targetDir = "$env:ProgramFiles\rust-eval\bin"
 New-Item -ItemType Directory -Force -Path $targetDir
 Move-Item -Force -Path ".\target\release\rs-eval.exe" "$targetDir\rs-eval.exe"
 $oldSystemPath = [Environment]::GetEnvironmentVariable("Path", "Machine")
