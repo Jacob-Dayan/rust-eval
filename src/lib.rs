@@ -1,5 +1,3 @@
-//! Library crate for `rs-eval` (shortcut alias for `rust-eval`).
-
 pub mod consts;
 pub mod prelude;
 
@@ -8,7 +6,6 @@ use std::sync::{Arc, Mutex};
 pub use crate as rs_eval;
 use crate::prelude::*;
 
-/// Constructs an [`io::Error`](std::io::Error) with [`io::ErrorKind::Other`](std::io::ErrorKind::Other) wrapped in `Err`.
 #[macro_export]
 macro_rules! new_io_error {
     ($e:expr) => {
@@ -16,7 +13,6 @@ macro_rules! new_io_error {
     };
 }
 
-/// Removes the temporary directory ([`consts::TEMP_DIR`]) if it exists.
 #[macro_export]
 macro_rules! clean_temp_dir {
     () => {
@@ -26,7 +22,6 @@ macro_rules! clean_temp_dir {
     };
 }
 
-/// Clears the terminal screen across platforms (`clear` on Unix, `cls` on Windows).
 #[macro_export]
 macro_rules! clear_screen {
     () => {{
@@ -39,7 +34,6 @@ macro_rules! clear_screen {
     }};
 }
 
-/// Navigation action triggered by navigation keys.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum NavAction {
     #[default]
@@ -49,30 +43,25 @@ pub enum NavAction {
     Submit,
 }
 
-/// Helper for `rs-eval` providing line-navigation state tracking.
 #[derive(Default, Clone)]
 pub struct RustEvalHelper {
     nav_action: Arc<Mutex<NavAction>>,
 }
 
-/// Type alias for [`RustEvalHelper`].
 pub type RsEvalHelper = RustEvalHelper;
 
 impl RustEvalHelper {
-    /// Creates a new helper with default navigation state.
     #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
-    /// Sets the pending navigation action.
     pub fn set_nav_action(&self, action: NavAction) {
         if let Ok(mut lock) = self.nav_action.lock() {
             *lock = action;
         }
     }
 
-    /// Returns the current navigation action, falling back to [`NavAction::Enter`].
     #[must_use]
     pub fn get_nav_action(&self) -> NavAction {
         self.nav_action
@@ -92,7 +81,6 @@ impl Highlighter for RustEvalHelper {}
 impl Validator for RustEvalHelper {}
 impl Helper for RustEvalHelper {}
 
-/// Conditional event handler for cursor boundary line navigation and submission keys.
 struct KeyNav {
     action: Arc<Mutex<NavAction>>,
     target: NavAction,
@@ -117,13 +105,8 @@ impl ConditionalEventHandler for KeyNav {
     }
 }
 
-/// Type alias for the configured `rs-eval` editor.
 pub type EvalEditor = Editor<RustEvalHelper, DefaultHistory>;
 
-/// Creates and configures a new [`EvalEditor`] with multi-line editing and keybindings.
-///
-/// # Errors
-/// Returns [`ReadlineError`] if editor initialization fails.
 pub fn create_editor() -> rustyline::Result<EvalEditor> {
     let mut rl = Editor::with_config(Config::builder().auto_add_history(false).build())?;
     let helper = RustEvalHelper::new();
@@ -169,13 +152,6 @@ pub fn create_editor() -> rustyline::Result<EvalEditor> {
     Ok(rl)
 }
 
-/// Reads a multi-line input block from the editor, handling navigation and commands.
-///
-/// Displays purple `>>> ` on the first line and purple `... ` on continuation lines.
-/// Returns `Ok(None)` on exit signal (`exit`, `quit`, or Ctrl+C).
-///
-/// # Errors
-/// Returns an [`io::Error`] if an unexpected readline failure occurs.
 pub fn read_input(rl: &mut EvalEditor) -> io::Result<Option<String>> {
     let mut lines: Vec<String> = vec![String::new()];
     let mut curr_idx = 0;
@@ -305,7 +281,6 @@ pub fn read_input(rl: &mut EvalEditor) -> io::Result<Option<String>> {
     }
 }
 
-/// Reads multi-line input using [`read_input`].
 #[macro_export]
 macro_rules! read_all {
     ($rl:expr) => {
@@ -313,12 +288,6 @@ macro_rules! read_all {
     };
 }
 
-/// Calls `rustc` to compile the code, then runs the compiled binary with `stdin`, `stdout`, and `stderr` redirected.
-///
-/// Accepts an optional `stderr` stream configuration for `rustc` (defaults to [`std::process::Stdio::inherit()`]).
-///
-/// # Errors
-/// Returns an [`io::Error`](std::io::Error) if compilation fails or the program exits with a non-zero status.
 #[macro_export]
 macro_rules! compile_and_run {
     () => {

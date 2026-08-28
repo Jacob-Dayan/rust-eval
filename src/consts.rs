@@ -15,7 +15,6 @@ pub const EXEC_FILE: &str = "./tmp/tmp";
 #[cfg(target_family = "windows")]
 pub const EXEC_FILE: &str = "tmp\\tmp.exe";
 
-/// Regex matching the `main` function signature.
 pub static MAIN_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"fn\s+main\s*\([^)]*\)(?:\s*->\s*[^{]+)?\s*\{").unwrap());
 

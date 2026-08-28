@@ -1,5 +1,3 @@
-//! Prelude module for `rs-eval`.
-
 pub use rustyline::{
     Cmd, ConditionalEventHandler, Config, DefaultEditor, Editor, Event, EventContext, EventHandler,
     Helper, KeyCode, KeyEvent, Modifiers, RepeatCount, completion::Completer, error::ReadlineError,

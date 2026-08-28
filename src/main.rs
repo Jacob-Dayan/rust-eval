@@ -3,10 +3,6 @@ use rs_eval::{consts::*, *};
 use rust_eval as rs_eval;
 use std::{fs, process::ExitCode};
 
-/// Entry point for `rs-eval`.
-///
-/// Loops evaluating inputs until the user signals an exit (via `exit`, `quit`, or Ctrl+C)
-/// or an unrecoverable error occurs.
 pub fn main() -> ExitCode {
     let mut rl = match create_editor() {
         Ok(rl) => rl,
@@ -33,12 +29,6 @@ pub fn main() -> ExitCode {
     }
 }
 
-/// Reads a single submission, validates/wraps code in `fn main()` if needed, compiles, and runs it.
-///
-/// Returns `Ok(true)` if the user requested exit, `Ok(false)` after completing a run.
-///
-/// # Errors
-/// Returns an [`io::Error`] if input reading, file creation, compilation, or execution fails.
 pub fn run(rl: &mut EvalEditor) -> io::Result<bool> {
     let Some(mut input) = read_input(rl)? else {
         return Ok(true);

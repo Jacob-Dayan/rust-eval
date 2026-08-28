@@ -1,14 +1,3 @@
-//! Integration tests for the `rs-eval` suite.
-//!
-//! Validates:
-//! - Simulated standard input handling via [`simulate_stdin!`].
-//! - Code generation, compilation, and execution via [`compile_and_run!`].
-//!
-//! # Thread Safety Notice
-//! Tests interacting with the file system share the constant directory path `./tmp`
-//! defined in [`rs_eval::consts`]. To prevent race conditions during parallel
-//! test execution (`cargo test`), file system operations are serialized using [`ENV_MUTEX`].
-
 #[macro_use]
 extern crate rust_eval as rs_eval;
 
@@ -18,10 +7,8 @@ use std::io::{self, Cursor, Read};
 use std::process::Stdio;
 use std::sync::Mutex;
 
-/// Global mutex to enforce sequential execution for tests manipulating `./tmp`.
 static ENV_MUTEX: Mutex<()> = Mutex::new(());
 
-/// Reads an in-memory string slice through a [`Cursor`] to simulate trimmed `stdin` input.
 macro_rules! simulate_stdin {
     ($input:expr) => {{
         let mut stdin_mock = Cursor::new($input.as_bytes());
@@ -31,7 +18,6 @@ macro_rules! simulate_stdin {
     }};
 }
 
-/// Tests that `simulate_stdin!` properly handles various whitespace and newline patterns.
 #[test]
 fn test_simulate_stdin_variations() {
     assert_eq!(simulate_stdin!("hello world"), "hello world");
@@ -43,7 +29,6 @@ fn test_simulate_stdin_variations() {
     );
 }
 
-/// Tests successful compilation and execution of valid Rust code.
 #[test]
 fn test_compile_and_run_success() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
@@ -67,7 +52,6 @@ fn test_compile_and_run_success() -> io::Result<()> {
     Ok(())
 }
 
-/// Tests that syntax errors in submitted Rust code are caught during compilation.
 #[test]
 fn test_compile_and_run_compilation_failure() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
@@ -92,7 +76,6 @@ fn test_compile_and_run_compilation_failure() -> io::Result<()> {
     Ok(())
 }
 
-/// Tests that runtime panics produce a non-zero exit status error.
 #[test]
 fn test_compile_and_run_runtime_panic() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
@@ -120,7 +103,6 @@ fn test_compile_and_run_runtime_panic() -> io::Result<()> {
     Ok(())
 }
 
-/// Tests basic variable allocations and standard arithmetic operations within evaluated code.
 #[test]
 fn test_compile_and_run_arithmetic_evaluation() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
@@ -144,7 +126,6 @@ fn test_compile_and_run_arithmetic_evaluation() -> io::Result<()> {
     Ok(())
 }
 
-/// Tests that [`DefaultEditor`] and [`create_editor`] initialize properly and accept history entries.
 #[test]
 fn test_default_editor_and_history() {
     use rs_eval::{create_editor, prelude::*};
@@ -161,7 +142,6 @@ fn test_default_editor_and_history() {
     );
 }
 
-/// Tests that [`RustEvalHelper`] properly sets and gets [`NavAction`] values.
 #[test]
 fn test_eval_helper_nav_action() {
     use rs_eval::{NavAction, RustEvalHelper};
