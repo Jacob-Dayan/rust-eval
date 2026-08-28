@@ -1,5 +1,6 @@
-use rust_eval as rs_eval;
+use rs_eval::prelude::*;
 use rs_eval::{consts::*, *};
+use rust_eval as rs_eval;
 use std::{fs, process::ExitCode};
 
 /// Entry point for `rs-eval`.

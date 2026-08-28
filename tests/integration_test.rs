@@ -147,7 +147,7 @@ fn test_compile_and_run_arithmetic_evaluation() -> io::Result<()> {
 /// Tests that [`DefaultEditor`] and [`create_editor`] initialize properly and accept history entries.
 #[test]
 fn test_default_editor_and_history() {
-    use rs_eval::{DefaultEditor, create_editor};
+    use rs_eval::{create_editor, prelude::*};
     let mut rl = DefaultEditor::new().expect("Failed to create DefaultEditor");
     let test_line = "let x = 42;";
     let added = rl.add_history_entry(test_line);
@@ -159,4 +159,21 @@ fn test_default_editor_and_history() {
         added_eval.is_ok(),
         "Failed to add history entry to EvalEditor"
     );
+}
+
+/// Tests that [`RustEvalHelper`] properly sets and gets [`NavAction`] values.
+#[test]
+fn test_eval_helper_nav_action() {
+    use rs_eval::{NavAction, RustEvalHelper};
+    let helper = RustEvalHelper::new();
+    assert_eq!(helper.get_nav_action(), NavAction::Enter);
+
+    helper.set_nav_action(NavAction::PrevLine);
+    assert_eq!(helper.get_nav_action(), NavAction::PrevLine);
+
+    helper.set_nav_action(NavAction::NextLine);
+    assert_eq!(helper.get_nav_action(), NavAction::NextLine);
+
+    helper.set_nav_action(NavAction::Submit);
+    assert_eq!(helper.get_nav_action(), NavAction::Submit);
 }

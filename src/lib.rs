@@ -1,17 +1,12 @@
 //! Library crate for `rs-eval` (shortcut alias for `rust-eval`).
 
-pub use rustyline::{
-    Cmd, ConditionalEventHandler, Config, DefaultEditor, Editor, Event, EventContext,
-    EventHandler, Helper, KeyCode, KeyEvent, Modifiers, RepeatCount, completion::Completer,
-    error::ReadlineError, highlight::Highlighter, hint::Hinter, history::DefaultHistory,
-    validate::Validator,
-};
-pub use std::io::{self, Read, Write};
+pub mod consts;
+pub mod prelude;
+
 use std::sync::{Arc, Mutex};
 
-pub mod consts;
-
 pub use crate as rs_eval;
+use crate::prelude::*;
 
 /// Constructs an [`io::Error`](std::io::Error) with [`io::ErrorKind::Other`](std::io::ErrorKind::Other) wrapped in `Err`.
 #[macro_export]
@@ -137,12 +132,27 @@ pub fn create_editor() -> rustyline::Result<EvalEditor> {
 
     let bindings = [
         (KeyCode::Left, Modifiers::NONE, NavAction::PrevLine, true),
-        (KeyCode::Backspace, Modifiers::NONE, NavAction::PrevLine, true),
+        (
+            KeyCode::Backspace,
+            Modifiers::NONE,
+            NavAction::PrevLine,
+            true,
+        ),
         (KeyCode::Right, Modifiers::NONE, NavAction::NextLine, true),
         (KeyCode::Up, Modifiers::NONE, NavAction::PrevLine, false),
         (KeyCode::Down, Modifiers::NONE, NavAction::NextLine, false),
-        (KeyCode::Char('d'), Modifiers::CTRL, NavAction::Submit, false),
-        (KeyCode::Char('z'), Modifiers::CTRL, NavAction::Submit, false),
+        (
+            KeyCode::Char('d'),
+            Modifiers::CTRL,
+            NavAction::Submit,
+            false,
+        ),
+        (
+            KeyCode::Char('z'),
+            Modifiers::CTRL,
+            NavAction::Submit,
+            false,
+        ),
     ];
 
     for (code, mods, target, at_boundary) in bindings {
@@ -214,16 +224,45 @@ pub fn read_input(rl: &mut EvalEditor) -> io::Result<Option<String>> {
                 lines[curr_idx] = line;
 
                 match action {
-                    NavAction::Submit => return Ok(Some(lines.join("\n"))),
-                    NavAction::PrevLine if curr_idx > 0 => {
-                        print!("\x1b[1A\r\x1b[K");
-                        let _ = io::stdout().flush();
-                        curr_idx -= 1;
-                        cursor_at_end = true;
+                    NavAction::Submit => {
+                        if curr_idx < lines.len() - 1 {
+                            let down = lines.len() - 1 - curr_idx;
+                            print!("\x1b[{down}B\r");
+                            let _ = io::stdout().flush();
+                        }
+                        return Ok(Some(lines.join("\n")));
                     }
-                    NavAction::NextLine if curr_idx + 1 < lines.len() => {
-                        curr_idx += 1;
-                        cursor_at_end = false;
+                    NavAction::PrevLine => {
+                        if curr_idx > 0 {
+                            if lines.len() > 1
+                                && curr_idx == lines.len() - 1
+                                && lines[curr_idx].is_empty()
+                            {
+                                lines.pop();
+                                print!("\x1b[1A\r\x1b[K\x1b[1A\r\x1b[K");
+                            } else {
+                                print!("\x1b[2A\r\x1b[K");
+                            }
+                            let _ = io::stdout().flush();
+                            curr_idx -= 1;
+                            cursor_at_end = true;
+                        } else {
+                            print!("\x1b[1A\r\x1b[K");
+                            let _ = io::stdout().flush();
+                            cursor_at_end = false;
+                        }
+                    }
+                    NavAction::NextLine => {
+                        if curr_idx + 1 < lines.len() {
+                            print!("\r\x1b[K");
+                            let _ = io::stdout().flush();
+                            curr_idx += 1;
+                            cursor_at_end = false;
+                        } else {
+                            print!("\x1b[1A\r\x1b[K");
+                            let _ = io::stdout().flush();
+                            cursor_at_end = true;
+                        }
                     }
                     NavAction::Enter => {
                         curr_idx += 1;
@@ -231,20 +270,36 @@ pub fn read_input(rl: &mut EvalEditor) -> io::Result<Option<String>> {
                             lines.push(String::new());
                             cursor_at_end = true;
                         } else {
+                            print!("\r\x1b[K");
+                            let _ = io::stdout().flush();
                             cursor_at_end = false;
                         }
                     }
-                    _ => {}
                 }
             }
             Err(ReadlineError::Eof) => {
+                if curr_idx < lines.len() - 1 {
+                    let down = lines.len() - 1 - curr_idx;
+                    print!("\x1b[{down}B\r\n");
+                } else {
+                    print!("\r\n");
+                }
+                let _ = io::stdout().flush();
+
                 return Ok(if lines.iter().all(|l| l.trim().is_empty()) {
                     None
                 } else {
                     Some(lines.join("\n"))
                 });
             }
-            Err(ReadlineError::Interrupted) => return Ok(None),
+            Err(ReadlineError::Interrupted) => {
+                if curr_idx < lines.len() - 1 {
+                    let down = lines.len() - 1 - curr_idx;
+                    print!("\x1b[{down}B\r\n");
+                    let _ = io::stdout().flush();
+                }
+                return Ok(None);
+            }
             Err(err) => return Err(std::io::Error::other(format!("Readline error: {err}"))),
         }
     }
@@ -285,7 +340,7 @@ macro_rules! compile_and_run {
                 .status()?;
 
             if status.success() {
-                Ok::<(), $crate::io::Error>(())
+                Ok::<(), std::io::Error>(())
             } else {
                 new_io_error!("Program has exited with a non-zero status.")
             }
