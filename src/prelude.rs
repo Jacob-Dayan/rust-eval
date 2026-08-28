@@ -1,6 +1,4 @@
 //! Prelude module for `rs-eval`.
-//!
-//! Re-exports commonly used types and traits from `rustyline`, `std::io`, and the crate.
 
 pub use rustyline::{
     Cmd, ConditionalEventHandler, Config, DefaultEditor, Editor, Event, EventContext, EventHandler,
