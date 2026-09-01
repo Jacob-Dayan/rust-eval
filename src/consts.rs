@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::path::PathBuf;
 use std::sync::LazyLock;
 
 pub const PURPLE: &str = "\x1b[35m";
@@ -6,14 +7,14 @@ pub const RESET: &str = "\x1b[0m";
 pub const PROMPT_MAIN: &str = "\x1b[35m>>> \x1b[0m";
 pub const PROMPT_CONT: &str = "\x1b[35m... \x1b[0m";
 
-pub const TEMP_DIR: &str = "./tmp";
-pub const CODE_FILE: &str = "./tmp/tmp.rs";
+pub static TEMP_DIR: LazyLock<PathBuf> = LazyLock::new(|| std::env::temp_dir().join("rust-eval"));
+pub static CODE_FILE: LazyLock<PathBuf> = LazyLock::new(|| TEMP_DIR.join("tmp.rs"));
 
 #[cfg(target_family = "unix")]
-pub const EXEC_FILE: &str = "./tmp/tmp";
+pub static EXEC_FILE: LazyLock<PathBuf> = LazyLock::new(|| TEMP_DIR.join("tmp"));
 
 #[cfg(target_family = "windows")]
-pub const EXEC_FILE: &str = "tmp\\tmp.exe";
+pub static EXEC_FILE: LazyLock<PathBuf> = LazyLock::new(|| TEMP_DIR.join("tmp.exe"));
 
 pub static MAIN_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"fn\s+main\s*\([^)]*\)(?:\s*->\s*[^{]+)?\s*\{").unwrap());

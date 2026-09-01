@@ -46,9 +46,9 @@ pub fn run(rl: &mut EvalEditor) -> io::Result<bool> {
     }
 
     clean_temp_dir!();
-    fs::create_dir_all(TEMP_DIR)?;
+    fs::create_dir_all(&*TEMP_DIR)?;
 
-    fs::write(CODE_FILE, format!("{HEADER}{input}{FOOTER}"))?;
+    fs::write(&*CODE_FILE, format!("{HEADER}{input}{FOOTER}"))?;
 
     print!("\n\n");
     let result = compile_and_run!();

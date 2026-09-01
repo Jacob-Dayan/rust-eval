@@ -16,8 +16,8 @@ macro_rules! new_io_error {
 #[macro_export]
 macro_rules! clean_temp_dir {
     () => {
-        if std::path::Path::new($crate::consts::TEMP_DIR).exists() {
-            let _ = std::fs::remove_dir_all($crate::consts::TEMP_DIR);
+        if $crate::consts::TEMP_DIR.exists() {
+            let _ = std::fs::remove_dir_all(&*$crate::consts::TEMP_DIR);
         }
     };
 }
@@ -295,14 +295,14 @@ macro_rules! compile_and_run {
     };
     ($rustc_stderr:expr) => {{
         let compile_status = std::process::Command::new("rustc")
-            .arg($crate::consts::CODE_FILE)
+            .arg(&*$crate::consts::CODE_FILE)
             .arg("--out-dir")
-            .arg($crate::consts::TEMP_DIR)
+            .arg(&*$crate::consts::TEMP_DIR)
             .stderr($rustc_stderr)
             .status()?;
 
         if compile_status.success() {
-            let status = std::process::Command::new($crate::consts::EXEC_FILE)
+            let status = std::process::Command::new(&*$crate::consts::EXEC_FILE)
                 .stdin(std::process::Stdio::inherit())
                 .stdout(std::process::Stdio::inherit())
                 .stderr(std::process::Stdio::inherit())

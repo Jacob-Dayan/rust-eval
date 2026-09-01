@@ -34,13 +34,13 @@ fn test_compile_and_run_success() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
     clean_temp_dir!();
 
-    fs::create_dir_all(consts::TEMP_DIR)?;
+    fs::create_dir_all(&*consts::TEMP_DIR)?;
     let code = format!(
         "{}\nfn main() {{\n    println!(\"Hello from integration test!\");\n}}\n{}",
         consts::HEADER,
         consts::FOOTER
     );
-    fs::write(consts::CODE_FILE, code)?;
+    fs::write(&*consts::CODE_FILE, code)?;
 
     let result = compile_and_run!();
     assert!(
@@ -57,13 +57,13 @@ fn test_compile_and_run_compilation_failure() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
     clean_temp_dir!();
 
-    fs::create_dir_all(consts::TEMP_DIR)?;
+    fs::create_dir_all(&*consts::TEMP_DIR)?;
     let invalid_code = format!(
         "{}\nfn main() {{\n    println!(\"Missing closing parenthesis\";\n}}\n{}",
         consts::HEADER,
         consts::FOOTER
     );
-    fs::write(consts::CODE_FILE, invalid_code)?;
+    fs::write(&*consts::CODE_FILE, invalid_code)?;
 
     let result = compile_and_run!(Stdio::null());
     assert!(
@@ -81,13 +81,13 @@ fn test_compile_and_run_runtime_panic() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
     clean_temp_dir!();
 
-    fs::create_dir_all(consts::TEMP_DIR)?;
+    fs::create_dir_all(&*consts::TEMP_DIR)?;
     let panic_code = format!(
         "{}\nfn main() {{\n    panic!(\"Explicit runtime test panic!\");\n}}\n{}",
         consts::HEADER,
         consts::FOOTER
     );
-    fs::write(consts::CODE_FILE, panic_code)?;
+    fs::write(&*consts::CODE_FILE, panic_code)?;
 
     let result = compile_and_run!();
     assert!(
@@ -108,13 +108,13 @@ fn test_compile_and_run_arithmetic_evaluation() -> io::Result<()> {
     let _guard = ENV_MUTEX.lock().unwrap_or_else(|p| p.into_inner());
     clean_temp_dir!();
 
-    fs::create_dir_all(consts::TEMP_DIR)?;
+    fs::create_dir_all(&*consts::TEMP_DIR)?;
     let arithmetic_code = format!(
         "{}\nfn main() {{\n    let a = 10;\n    let b = 20;\n    assert_eq!(a + b, 30);\n}}\n{}",
         consts::HEADER,
         consts::FOOTER
     );
-    fs::write(consts::CODE_FILE, arithmetic_code)?;
+    fs::write(&*consts::CODE_FILE, arithmetic_code)?;
 
     let result = compile_and_run!();
     assert!(
