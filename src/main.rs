@@ -29,6 +29,13 @@ pub fn main() -> ExitCode {
     }
 }
 
+/// Reads code from stdin, auto-wraps in `fn main` if omitted, and runs it via `rustc`.
+///
+/// Returns `Ok(true)` on exit signals, or `Ok(false)` to continue the REPL loop.
+///
+/// Note: Uses a dumb hack of `input.contains("fn ")` check to reject functions without a `main()`,
+/// which will false-positive on `"fn "` inside string literals or comments.
+/// will be pathced in the future.
 pub fn run(rl: &mut EvalEditor) -> io::Result<bool> {
     let Some(mut input) = read_input(rl)? else {
         return Ok(true);
