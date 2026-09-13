@@ -7,7 +7,7 @@
 ## Features
 
 * **Interactive Multi-Line Editing:** Write and edit multi-line Rust code with seamless cursor navigation. Pressing **Left (`←`)** at the start of a line moves up to the previous line, and pressing **Right (`→`)** at the end of a line moves down to the next line. You can also use **Up (`↑`)** and **Down (`↓`)** to move vertically between lines and edit any line in place.
-* **Input Streaming & EOF Evaluation:** Type code naturally line-by-line with `Enter`. Stream `EOF` (`Ctrl+D` on Unix, `Ctrl+Z` on Windows) to submit the code for evaluation.
+* **Input Streaming & EOF Evaluation:** Type code naturally line-by-line with `Enter` (splitting lines mid-text or inserting lines). Stream `EOF` (`Ctrl+D` on Unix, `Ctrl+Z` on Windows) to submit the code for evaluation.
 * **Regex Validation & Implicit `main` Wrapping:** Uses pre-compiled regex matching to verify the presence of a valid `fn main` entry point. If no `main` function or additional function definitions (`fn `) are present, it automatically wraps the snippet inside an implicit `main` function.
 * **Cross-Platform Support:** Automatically handles execution targets and temp paths for Unix (`Linux`/`macOS`) and `Windows` (`.exe`).
 * **Isolated Build Environment:** Automatically manages a temporary directory in the system temp folder (`std::env::temp_dir() / "rust-eval"`) for source generation and compilation, ensuring thorough cleanup even on error.
@@ -80,9 +80,10 @@ To enter, stream EOF (ctrl+D on Unix, ctrl+Z on Windows)
 ```text
 .
 ├── src/
-│   ├── lib.rs      # Exported macros and modules
+│   ├── lib.rs      # Exported macros, helpers, and REPL input handling
 │   ├── consts.rs   # Path constants, Regex matchers, Header & Footer wrappers
-│   └── main.rs     # CLI entry point, input handling, process control, and cleanup
+│   ├── prelude.rs  # Re-exports of common rustyline and I/O types
+│   └── main.rs     # Input handling, process control, and cleanup
 └── Cargo.toml
 ```
 

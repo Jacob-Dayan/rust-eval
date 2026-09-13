@@ -147,6 +147,7 @@ fn test_eval_helper_nav_action() {
     use rs_eval::{NavAction, RustEvalHelper};
     let helper = RustEvalHelper::new();
     assert_eq!(helper.get_nav_action(), NavAction::Enter);
+    assert_eq!(helper.get_split_pos(), None);
 
     helper.set_nav_action(NavAction::PrevLine);
     assert_eq!(helper.get_nav_action(), NavAction::PrevLine);
@@ -156,4 +157,19 @@ fn test_eval_helper_nav_action() {
 
     helper.set_nav_action(NavAction::Submit);
     assert_eq!(helper.get_nav_action(), NavAction::Submit);
+
+    helper.set_split_pos(Some(7));
+    assert_eq!(helper.get_split_pos(), Some(7));
+
+    helper.set_split_pos(None);
+    assert_eq!(helper.get_split_pos(), None);
+}
+
+#[test]
+fn test_create_editor_with_enter_binding() {
+    use rs_eval::create_editor;
+    let editor = create_editor();
+    assert!(editor.is_ok(), "Failed to create EvalEditor with Enter binding");
+    let rl = editor.unwrap();
+    assert!(rl.helper().is_some(), "EvalEditor helper should be configured");
 }
