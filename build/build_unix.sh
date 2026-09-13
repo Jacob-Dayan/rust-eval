@@ -3,6 +3,9 @@ set -e
 
 cd "$(dirname "$0")/.."
 
+echo "Password is needed to move rust-eval to /usr/local/bin."
+sudo -v
+
 echo "Building rust-eval (release mode)..."
 cargo build --release
 
