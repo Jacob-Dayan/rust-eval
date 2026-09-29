@@ -25,12 +25,8 @@ macro_rules! clean_temp_dir {
 #[macro_export]
 macro_rules! clear_screen {
     () => {{
-        #[cfg(target_family = "unix")]
-        let _ = std::process::Command::new("clear").status();
-        #[cfg(target_family = "windows")]
-        let _ = std::process::Command::new("cmd")
-            .args(["/C", "cls"])
-            .status();
+        print!("\x1b[H\x1b[2J\x1b[3J");
+        let _ = <std::io::Stdout as std::io::Write>::flush(&mut std::io::stdout());
     }};
 }
 
